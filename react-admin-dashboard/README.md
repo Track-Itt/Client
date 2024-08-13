@@ -2,5 +2,6 @@
 
 To Start
 
-#npm install
+#npm install --force
+#npm install cross-env --save-dev --legacy-peer-deps
 #npm start
