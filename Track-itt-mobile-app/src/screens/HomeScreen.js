@@ -1,6 +1,13 @@
-import * as React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import { Text, Button, Card, useTheme } from 'react-native-paper';
+// src/screens/HomeScreen.js
+import * as React from "react";
+import {
+  View,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
+import { Text, Card, useTheme } from "react-native-paper";
 
 const HomeScreen = ({ navigation }) => {
   const theme = useTheme();
@@ -8,85 +15,99 @@ const HomeScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={[styles.welcomeText, { color: theme.colors.primary }]}>
-          Welcome to Track-itt
+        <Text style={[styles.title, { color: theme.colors.primary }]}>
+          Home
         </Text>
 
-        {/* Add Product Section */}
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Card.Content>
-            <Text style={styles.cardTitle}>Add Product</Text>
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate('AddProductScreen')}
-              style={[styles.button, { backgroundColor: theme.colors.primary }]}
-              contentStyle={{ paddingVertical: 8 }}
-            >
-              Add
-            </Button>
-          </Card.Content>
-        </Card>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("AddProductScreen")}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardText}>Add Product</Text>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
 
-        {/* See All Products Section */}
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Card.Content>
-            <Text style={styles.cardTitle}>See All Products</Text>
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate('SeeAllProductsScreen')}
-              style={[styles.button, { backgroundColor: theme.colors.primary }]}
-              contentStyle={{ paddingVertical: 8 }}
-            >
-              View
-            </Button>
-          </Card.Content>
-        </Card>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("SeeAllProductsScreen")}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardText}>See All Products</Text>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
 
-        {/* Send Items Section */}
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Card.Content>
-            <Text style={styles.cardTitle}>Send Items</Text>
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate('SendItemsScreen')}
-              style={[styles.button, { backgroundColor: theme.colors.primary }]}
-              contentStyle={{ paddingVertical: 8 }}
-            >
-              Go
-            </Button>
-          </Card.Content>
-        </Card>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("SendItemsScreen")}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardText}>Send Items</Text>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
 
-        {/* Receive Items Section */}
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Card.Content>
-            <Text style={styles.cardTitle}>Receive Items</Text>
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate('ReceiveItemsScreen')}
-              style={[styles.button, { backgroundColor: theme.colors.primary }]}
-              contentStyle={{ paddingVertical: 8 }}
-            >
-              Go
-            </Button>
-          </Card.Content>
-        </Card>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("ReceiveItemsScreen")}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardText}>Receive Items</Text>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
 
-        {/* Transaction History Section */}
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Card.Content>
-            <Text style={styles.cardTitle}>Transaction History</Text>
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate('TransactionHistoryScreen')}
-              style={[styles.button, { backgroundColor: theme.colors.primary }]}
-              contentStyle={{ paddingVertical: 8 }}
-            >
-              View
-            </Button>
-          </Card.Content>
-        </Card>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("TransactionHistoryScreen")}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardText}>Transaction History</Text>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
 
+        <TouchableOpacity
+          onPress={() => navigation.navigate("InvoiceDetailsScreen")}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardText}>Invoice Details</Text>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate("WarehouseManagementScreen")}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardText}>Warehouse Management</Text>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate("ProductTransferDetailsScreen")}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardText}>Product Transfer Details</Text>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate("BulkOperationsScreen")}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardText}>Bulk Operations</Text>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -95,30 +116,25 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   container: {
-    flexGrow: 1,
     padding: 16,
-    justifyContent: 'center',
   },
-  welcomeText: {
+  title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    textAlign: 'center',
+    fontWeight: "bold",
+    marginBottom: 16,
+    textAlign: "center",
   },
   card: {
     marginBottom: 16,
     borderRadius: 10,
-    padding: 10,
+    backgroundColor: "#F3F4F6",
   },
-  cardTitle: {
+  cardText: {
     fontSize: 18,
-    marginBottom: 8,
-  },
-  button: {
-    borderRadius: 10,
+    color: "#1E3A8A",
   },
 });
 

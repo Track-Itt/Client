@@ -1,47 +1,88 @@
 import * as React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView, Modal, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, SafeAreaView, ScrollView, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { TextInput, Button, Text, useTheme, Snackbar } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
+import api, { addProduct, fetchAllCategories, fetchAllInventories } from '../services/api';
 
-// Dummy data for categories and inventory locations
-const dummyData = {
-  categories: [
-    { label: 'Category 1', value: 'category1' },
-    { label: 'Category 2', value: 'category2' },
-    { label: 'Category 3', value: 'category3' },
-  ],
-  inventoryLocations: [
-    { label: 'Location 1', value: 'location1' },
-    { label: 'Location 2', value: 'location2' },
-    { label: 'Location 3', value: 'location3' },
-  ],
-};
-
-const AddProductScreen = ({ navigation }) => {
+const AddProductScreen = () => {
   const [name, setName] = React.useState('');
   const [category, setCategory] = React.useState('');
   const [quantity, setQuantity] = React.useState('');
   const [cost, setCost] = React.useState('');
   const [inventoryLocation, setInventoryLocation] = React.useState('');
+  const [categories, setCategories] = React.useState([]);
+  const [inventories, setInventories] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [addingProduct, setAddingProduct] = React.useState(false); // State for adding product loading indicator
   const [snackbarVisible, setSnackbarVisible] = React.useState(false);
   const [snackbarMessage, setSnackbarMessage] = React.useState('');
   const [snackbarColor, setSnackbarColor] = React.useState('');
   
-  // Modal state
   const [modalVisible, setModalVisible] = React.useState(false);
-  const [modalType, setModalType] = React.useState(''); // 'category' or 'location'
+  const [modalType, setModalType] = React.useState('');
 
   const theme = useTheme();
 
-  const handleAddProduct = () => {
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [categoriesData, inventoriesData] = await Promise.all([
+          fetchAllCategories(),
+          fetchAllInventories(),
+        ]);
+
+        if (categoriesData.length === 0 || inventoriesData.length === 0) {
+          setSnackbarMessage('No categories or inventories available.');
+          setSnackbarColor('red');
+          setSnackbarVisible(true);
+          setTimeout(() => {
+            setSnackbarVisible(false);
+          }, 3000);
+        }
+
+        setCategories(categoriesData);
+        setInventories(inventoriesData);
+      } catch (error) {
+        setSnackbarMessage('Error fetching data. Please try again.');
+        setSnackbarColor('red');
+        setSnackbarVisible(true);
+        setTimeout(() => {
+          setSnackbarVisible(false);
+        }, 3000);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleAddProduct = async () => {
     if (name && category && quantity && cost && inventoryLocation) {
-      setSnackbarMessage('Product added successfully!');
-      setSnackbarColor('green');
-      setSnackbarVisible(true);
-      setTimeout(() => {
-        setSnackbarVisible(false);
-        navigation.goBack();
-      }, 3000);
+      setAddingProduct(true);
+      try {
+        await addProduct(name, quantity, cost, category, inventoryLocation);
+        setSnackbarMessage('Product added successfully!');
+        setSnackbarColor('green');
+        setSnackbarVisible(true);
+        setTimeout(() => {
+          setSnackbarVisible(false);
+        }, 3000);
+        setName('');
+        setCategory('');
+        setQuantity('');
+        setCost('');
+        setInventoryLocation('');
+      } catch (error) {
+        setSnackbarMessage('Error adding product. Please try again.');
+        setSnackbarColor('red');
+        setSnackbarVisible(true);
+        setTimeout(() => {
+          setSnackbarVisible(false);
+        }, 3000);
+      } finally {
+        setAddingProduct(false);
+      }
     } else {
       setSnackbarMessage('Please fill out all fields.');
       setSnackbarColor('red');
@@ -66,6 +107,14 @@ const AddProductScreen = ({ navigation }) => {
     setModalVisible(false);
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -83,7 +132,7 @@ const AddProductScreen = ({ navigation }) => {
           onPress={() => handleOpenModal('category')}
         >
           <Text style={styles.pickerText}>
-            {category ? dummyData.categories.find(c => c.value === category)?.label : 'Select Category'}
+            {category ? categories.find(c => c._id === category)?.name : 'Select Category'}
           </Text>
         </TouchableOpacity>
         <TextInput
@@ -109,7 +158,7 @@ const AddProductScreen = ({ navigation }) => {
           onPress={() => handleOpenModal('location')}
         >
           <Text style={styles.pickerText}>
-            {inventoryLocation ? dummyData.inventoryLocations.find(l => l.value === inventoryLocation)?.label : 'Select Inventory Location'}
+            {inventoryLocation ? inventories.find(l => l._id === inventoryLocation)?.location : 'Select Inventory Location'}
           </Text>
         </TouchableOpacity>
         <Button
@@ -117,8 +166,9 @@ const AddProductScreen = ({ navigation }) => {
           onPress={handleAddProduct}
           style={[styles.button, { backgroundColor: theme.colors.primary, borderRadius: 10 }]}
           contentStyle={{ paddingVertical: 8 }}
+          disabled={addingProduct} // Disable the button while loading
         >
-          Add Product
+          {addingProduct ? <ActivityIndicator size="small" color="#FFF" /> : 'Add Product'}
         </Button>
         <Snackbar
           visible={snackbarVisible}
@@ -145,12 +195,12 @@ const AddProductScreen = ({ navigation }) => {
             >
               <Picker.Item label={`Select ${modalType === 'category' ? 'Category' : 'Location'}`} value="" />
               {modalType === 'category' &&
-                dummyData.categories.map((item) => (
-                  <Picker.Item key={item.value} label={item.label} value={item.value} />
+                categories.map((item) => (
+                  <Picker.Item key={item._id} label={item.name} value={item._id} />
                 ))}
               {modalType === 'location' &&
-                dummyData.inventoryLocations.map((item) => (
-                  <Picker.Item key={item.value} label={item.label} value={item.value} />
+                inventories.map((item) => (
+                  <Picker.Item key={item._id} label={item.location} value={item._id} />
                 ))}
             </Picker>
             <Button onPress={() => setModalVisible(false)}>Close</Button>
@@ -205,6 +255,11 @@ const styles = StyleSheet.create({
     margin: 20,
     padding: 20,
     borderRadius: 10,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
