@@ -29,7 +29,9 @@ const LoginScreen = ({ navigation }) => {
         setSnackbarVisible(true);
         setTimeout(() => {
           setSnackbarVisible(false);
-          navigation.replace("HomeScreen");
+          navigation.replace('HomeTabs', {
+            screen: 'Home',
+          });          
         }, 1500);
       } else {
         setSnackbarMessage("Login failed. Please try again.");

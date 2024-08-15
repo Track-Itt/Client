@@ -15,7 +15,9 @@ const SignUpScreen = ({ navigation }) => {
     setTimeout(() => {
       setLoading(false);
       // Add logic for sign-up, e.g., API call
-      navigation.navigate('HomeScreen'); // Replace with actual home screen when implemented
+      navigation.replace('HomeTabs', {
+        screen: 'Home',
+      });       // Replace with actual home screen when implemented
     }, 1500);
   };
 
