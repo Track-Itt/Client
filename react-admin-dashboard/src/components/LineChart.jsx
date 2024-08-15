@@ -1,11 +1,39 @@
 import { ResponsiveLine } from "@nivo/line";
 import { useTheme } from "@mui/material";
 import { tokens } from "../theme";
-import { mockLineData as data } from "../data/mockData";
+import { useEffect, useState } from "react";
 
 const LineChart = ({ isCustomLineColors = false, isDashboard = false }) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/chart/lineChart");
+        const result = await response.json();
+
+        // Transform the data
+        const transformedData = result.map((item) => ({
+          id: item.location,
+          color: isCustomLineColors
+            ? colors.greenAccent[500]
+            : tokens("dark").greenAccent[500], // adjust color logic as needed
+          data: item.data.map((d) => ({
+            x: d.category,
+            y: d.sales,
+          })),
+        }));
+
+        setData(transformedData);
+      } catch (error) {
+        console.error("Error fetching the line chart data:", error);
+      }
+    };
+
+    fetchData();
+  }, [isCustomLineColors, colors]);
 
   return (
     <ResponsiveLine
@@ -43,7 +71,7 @@ const LineChart = ({ isCustomLineColors = false, isDashboard = false }) => {
           },
         },
       }}
-      colors={isDashboard ? { datum: "color" } : { scheme: "nivo" }} // added
+      colors={isDashboard ? { datum: "color" } : { scheme: "nivo" }}
       margin={{ top: 50, right: 110, bottom: 50, left: 60 }}
       xScale={{ type: "point" }}
       yScale={{
@@ -62,17 +90,17 @@ const LineChart = ({ isCustomLineColors = false, isDashboard = false }) => {
         tickSize: 0,
         tickPadding: 5,
         tickRotation: 0,
-        legend: isDashboard ? undefined : "transportation", // added
+        legend: isDashboard ? undefined : "category",
         legendOffset: 36,
         legendPosition: "middle",
       }}
       axisLeft={{
         orient: "left",
-        tickValues: 5, // added
+        tickValues: 5,
         tickSize: 3,
         tickPadding: 5,
         tickRotation: 0,
-        legend: isDashboard ? undefined : "count", // added
+        legend: isDashboard ? undefined : "sales",
         legendOffset: -40,
         legendPosition: "middle",
       }}
