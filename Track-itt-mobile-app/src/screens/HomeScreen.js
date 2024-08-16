@@ -68,46 +68,6 @@ const HomeScreen = ({ navigation }) => {
             </Card.Content>
           </Card>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate("InvoiceDetailsScreen")}
-        >
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text style={styles.cardText}>Invoice Details</Text>
-            </Card.Content>
-          </Card>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate("WarehouseManagementScreen")}
-        >
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text style={styles.cardText}>Warehouse Management</Text>
-            </Card.Content>
-          </Card>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate("ProductTransferDetailsScreen")}
-        >
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text style={styles.cardText}>Product Transfer Details</Text>
-            </Card.Content>
-          </Card>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate("BulkOperationsScreen")}
-        >
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text style={styles.cardText}>Bulk Operations</Text>
-            </Card.Content>
-          </Card>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -128,6 +88,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   card: {
+    padding: 16,
     marginBottom: 16,
     borderRadius: 10,
     backgroundColor: "#F3F4F6",

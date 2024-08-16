@@ -1,221 +1,195 @@
-import * as React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView, Modal, TouchableOpacity, Alert } from 'react-native';
-import { TextInput, Button, Text, useTheme, Card, Dialog, Portal } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, SafeAreaView, ScrollView, Text, ActivityIndicator, Modal, TouchableOpacity } from 'react-native';
+import { Card, Title, Paragraph, Button, TextInput, useTheme } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
-
-// Dummy data for transaction history and locations
-const dummyData = {
-  transactionHistory: [
-    {
-      id: '1',
-      from: 'Warehouse A',
-      to: 'Inventory 1',
-      productsTransferred: ['Product A', 'Product B'],
-      deliveredByEmployeeId: '123456',
-      receivedByEmployeeId: '654321',
-      vehicleNumber: 'XYZ1234',
-      status: 'Completed',
-      timestamp: '2024-08-14T10:00:00Z',
-      sentByMe: true,
-      receivedByMe: false,
-    },
-    {
-      id: '2',
-      from: 'Warehouse B',
-      to: 'Inventory 2',
-      productsTransferred: ['Product C'],
-      deliveredByEmployeeId: '234567',
-      receivedByEmployeeId: null, // Not yet received
-      vehicleNumber: 'ABC5678',
-      status: 'Pending',
-      timestamp: '2024-08-14T12:00:00Z',
-      sentByMe: false,
-      receivedByMe: true,
-    },
-    // Add more records as needed
-  ],
-  warehouses: [
-    { label: 'Warehouse A', value: 'warehouseA' },
-    { label: 'Warehouse B', value: 'warehouseB' },
-  ],
-  inventories: [
-    { label: 'Inventory 1', value: 'inventory1' },
-    { label: 'Inventory 2', value: 'inventory2' },
-  ],
-};
+import { fetchAllProductTransfers } from '../services/api';
 
 const TransactionHistoryScreen = () => {
   const theme = useTheme();
+  const [transfers, setTransfers] = useState([]);
+  const [filteredTransfers, setFilteredTransfers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [receiverId, setReceiverId] = useState('');
+  const [senderId, setSenderId] = useState('');
+  const [selectedFromLocation, setSelectedFromLocation] = useState('');
+  const [selectedToLocation, setSelectedToLocation] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [filterType, setFilterType] = useState(''); // 'from' or 'to'
 
-  const [filterFrom, setFilterFrom] = React.useState('');
-  const [filterTo, setFilterTo] = React.useState('');
-  const [filterStatus, setFilterStatus] = React.useState('');
-  const [filterSentOrReceived, setFilterSentOrReceived] = React.useState('');
-  const [employeeId, setEmployeeId] = React.useState('');
-  const [dialogVisible, setDialogVisible] = React.useState(false);
-  const [selectedTransaction, setSelectedTransaction] = React.useState(null);
+  useEffect(() => {
+    const fetchTransfers = async () => {
+      try {
+        const data = await fetchAllProductTransfers();
+        setTransfers(data);
+        setFilteredTransfers(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const [modalVisible, setModalVisible] = React.useState(false);
-  const [modalType, setModalType] = React.useState(''); // 'from' or 'to'
+    fetchTransfers();
+  }, []);
 
-  const handleCompleteTransaction = (transaction) => {
-    setSelectedTransaction(transaction);
-    setDialogVisible(true);
-  };
+  useEffect(() => {
+    applyFilters();
+  }, [searchTerm, receiverId, senderId, selectedFromLocation, selectedToLocation]);
 
-  const confirmCompleteTransaction = () => {
-    if (employeeId) {
-      Alert.alert('Transaction Completed', `Transaction for ${selectedTransaction.productsTransferred.join(', ')} completed successfully!`);
-      setDialogVisible(false);
-    } else {
-      Alert.alert('Error', 'Please enter your Employee ID.');
+  const applyFilters = () => {
+    let filtered = transfers;
+
+    if (searchTerm) {
+      filtered = filtered.filter(transfer =>
+        transfer.productsTransferred.some(product =>
+          product.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
     }
+
+    if (receiverId) {
+      filtered = filtered.filter(transfer => transfer.receivedByEmployeeId.includes(receiverId));
+    }
+
+    if (senderId) {
+      filtered = filtered.filter(transfer => transfer.deliveredByEmployeeId.includes(senderId));
+    }
+
+    if (selectedFromLocation) {
+      filtered = filtered.filter(transfer => transfer.from?.location === selectedFromLocation);
+    }
+
+    if (selectedToLocation) {
+      filtered = filtered.filter(transfer => transfer.to?.location === selectedToLocation);
+    }
+
+    setFilteredTransfers(filtered);
   };
 
-  const handleOpenModal = (type) => {
-    setModalType(type);
+  const handleFilterModal = (type) => {
+    setFilterType(type);
     setModalVisible(true);
   };
 
-  const handleSelectValue = (value) => {
-    if (modalType === 'from') {
-      setFilterFrom(value);
-    } else if (modalType === 'to') {
-      setFilterTo(value);
-    }
-    setModalVisible(false);
+  const renderPickerOptions = () => {
+    const locations = Array.from(new Set(transfers.map(transfer => transfer[filterType]?.location)));
+
+    return locations.map(location => (
+      <Picker.Item key={location} label={location} value={location} />
+    ));
   };
 
-  const filteredTransactions = dummyData.transactionHistory.filter(transaction => {
+  if (loading) {
     return (
-      (filterFrom ? transaction.from.toLowerCase().includes(filterFrom.toLowerCase()) : true) &&
-      (filterTo ? transaction.to.toLowerCase().includes(filterTo.toLowerCase()) : true) &&
-      (filterStatus ? transaction.status.toLowerCase().includes(filterStatus.toLowerCase()) : true) &&
-      (filterSentOrReceived === 'sent' ? transaction.sentByMe : true) &&
-      (filterSentOrReceived === 'received' ? transaction.receivedByMe : true)
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading transactions...</Text>
+      </View>
     );
-  });
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={[styles.title, { color: theme.colors.primary }]}>Transaction History</Text>
-
-        <View style={styles.filterRow}>
+        <View style={styles.filterContainer}>
+          <TextInput
+            placeholder="Search by product name"
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+          />
+          <TextInput
+            placeholder="Filter by Receiver ID"
+            value={receiverId}
+            onChangeText={setReceiverId}
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+          />
+          <TextInput
+            placeholder="Filter by Sender ID"
+            value={senderId}
+            onChangeText={setSenderId}
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+          />
           <TouchableOpacity
-            style={[styles.ButtonInput, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-            onPress={() => handleOpenModal('from')}
+            style={[styles.filterButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
+            onPress={() => handleFilterModal('from')}
           >
             <Text style={styles.pickerText}>
-              {filterFrom ? dummyData.warehouses.concat(dummyData.inventories).find(w => w.value === filterFrom)?.label : 'Filter From'}
+              {selectedFromLocation ? selectedFromLocation : 'Filter by From Location'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.ButtonInput, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-            onPress={() => handleOpenModal('to')}
+            style={[styles.filterButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
+            onPress={() => handleFilterModal('to')}
           >
             <Text style={styles.pickerText}>
-              {filterTo ? dummyData.warehouses.concat(dummyData.inventories).find(i => i.value === filterTo)?.label : 'Filter To'}
+              {selectedToLocation ? selectedToLocation : 'Filter by To Location'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <TextInput
-          label="Filter by Status"
-          value={filterStatus}
-          onChangeText={setFilterStatus}
-          style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-          mode="outlined"
-          theme={{ roundness: 10 }}
-        />
-        <TouchableOpacity
-          style={[styles.filterButton, { backgroundColor: theme.colors.primary }]}
-          onPress={() => setFilterSentOrReceived(filterSentOrReceived === 'sent' ? 'received' : 'sent')}
-        >
-          <Text style={[styles.filterButtonText, { color: theme.colors.background }]}>
-            {filterSentOrReceived === 'sent' ? 'Filter Sent By Me' : 'Filter Received By Me'}
-          </Text>
-        </TouchableOpacity>
-
-        {filteredTransactions.map((transaction) => (
-          <Card key={transaction.id} style={styles.card}>
-            <Card.Content>
-              <Text style={styles.transactionTitle}>
-                {`Transaction from ${transaction.from} to ${transaction.to}`}
-              </Text>
-              <Text style={styles.detailText}>
-                Products Transferred: {transaction.productsTransferred.join(', ')}
-              </Text>
-              <Text style={styles.detailText}>
-                Delivered By Employee ID: {transaction.deliveredByEmployeeId}
-              </Text>
-              <Text style={styles.detailText}>
-                {transaction.receivedByEmployeeId ? `Received By Employee ID: ${transaction.receivedByEmployeeId}` : 'Not yet received'}
-              </Text>
-              <Text style={styles.detailText}>Vehicle Number: {transaction.vehicleNumber}</Text>
-              <Text style={[styles.status, transaction.status === 'Completed' ? styles.completed : styles.pending]}>
-                Status: {transaction.status}
-              </Text>
-              <Text style={styles.timestamp}>
-                Timestamp: {new Date(transaction.timestamp).toLocaleString()}
-              </Text>
-              {transaction.receivedByMe && !transaction.receivedByEmployeeId && (
-                <Button
-                  mode="contained"
-                  onPress={() => handleCompleteTransaction(transaction)}
-                  style={[styles.completeButton, { backgroundColor: theme.colors.primary }]}
-                >
-                  Complete Transaction
-                </Button>
-              )}
-            </Card.Content>
-          </Card>
-        ))}
-      </ScrollView>
-
-      {/* Modal for Picker */}
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Picker
-              selectedValue={modalType === 'from' ? filterFrom : filterTo}
-              onValueChange={(value) => handleSelectValue(value)}
-            >
-              <Picker.Item label={`Select ${modalType === 'from' ? 'From Location' : 'To Location'}`} value="" />
-              {dummyData.warehouses.concat(dummyData.inventories).map((item) => (
-                <Picker.Item key={item.value} label={item.label} value={item.value} />
-              ))}
-            </Picker>
-            <Button onPress={() => setModalVisible(false)}>Close</Button>
+        {filteredTransfers.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No transactions match the filters.</Text>
           </View>
-        </View>
-      </Modal>
+        ) : (
+          filteredTransfers.map((transfer) => (
+            <Card key={transfer._id} style={styles.card}>
+              <Card.Content>
+                <Title>Transaction ID: {transfer._id}</Title>
+                <Paragraph>Transfer from: {transfer.from?.location} to {transfer.to?.location}</Paragraph>
+                <Paragraph>Products Transferred:</Paragraph>
+                {transfer.productsTransferred.map((product) => (
+                  <Paragraph key={product._id}>
+                    {product.name} - {product.count} units
+                  </Paragraph>
+                ))}
+                <Paragraph>Delivered by Employee ID: {transfer.deliveredByEmployeeId}</Paragraph>
+                <Paragraph>Received by Employee ID: {transfer.receivedByEmployeeId}</Paragraph>
+                <Paragraph>Vehicle Number: {transfer.vehicleNumber}</Paragraph>
+              </Card.Content>
+            </Card>
+          ))
+        )}
 
-      {/* Confirmation Dialog */}
-      <Portal>
-        <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
-          <Dialog.Title>Complete Transaction</Dialog.Title>
-          <Dialog.Content>
-            <TextInput
-              label="Enter Your Employee ID"
-              value={employeeId}
-              onChangeText={setEmployeeId}
-              style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-              mode="outlined"
-              theme={{ roundness: 10 }}
-            />
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={confirmCompleteTransaction}>Confirm</Button>
-            <Button onPress={() => setDialogVisible(false)}>Cancel</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+        {/* Modal for Location Filters */}
+        <Modal
+          visible={modalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Picker
+                selectedValue={filterType === 'from' ? selectedFromLocation : selectedToLocation}
+                onValueChange={(itemValue) => {
+                  if (filterType === 'from') {
+                    setSelectedFromLocation(itemValue);
+                  } else {
+                    setSelectedToLocation(itemValue);
+                  }
+                  setModalVisible(false);
+                }}
+              >
+                <Picker.Item label="Select Location" value="" />
+                {renderPickerOptions()}
+              </Picker>
+              <Button onPress={() => setModalVisible(false)}>Close</Button>
+            </View>
+          </View>
+        </Modal>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -226,50 +200,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   container: {
-    flexGrow: 1,
     padding: 16,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  card: {
+  filterContainer: {
     marginBottom: 16,
-    borderRadius: 10,
-  },
-  transactionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  detailText: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  status: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 8,
-  },
-  completed: {
-    color: 'green',
-  },
-  pending: {
-    color: 'orange',
-  },
-  timestamp: {
-    fontSize: 12,
-    marginTop: 8,
-    color: '#888',
   },
   input: {
-    marginBottom: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
   },
-  ButtonInput: {
-    flex: 1,
-    marginHorizontal: 8,
+  filterButton: {
+    marginBottom: 8,
     justifyContent: 'center',
     height: 56,
     borderWidth: 1,
@@ -280,25 +223,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
   },
-  filterButton: {
+  card: {
     marginBottom: 16,
-    justifyContent: 'center',
-    height: 56,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
     borderRadius: 10,
-    paddingHorizontal: 12,
+    backgroundColor: '#f9f9f9',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  filterButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  completeButton: {
+  loadingText: {
     marginTop: 8,
+    color: '#000',
   },
-  filterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: 'red',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#000',
   },
   modalContainer: {
     flex: 1,

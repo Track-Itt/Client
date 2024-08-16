@@ -1,68 +1,115 @@
-import * as React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import { TextInput, Button, Text, useTheme } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, SafeAreaView, ScrollView, Text, ActivityIndicator } from 'react-native';
+import { Button, useTheme, Snackbar, Dialog, Portal, Paragraph } from 'react-native-paper';
+import { fetchUserProfile, logoutUser } from '../services/api';
 
-// Dummy data for user profile
-const dummyUserProfile = {
-  name: 'John Doe',
-  employeeId: '123456',
-  email: 'john.doe@example.com',
-  phone: '123-456-7890',
-};
-
-const UserProfileScreen = () => {
+const UserProfileScreen = ({ navigation }) => {
   const theme = useTheme();
-  const [profile, setProfile] = React.useState(dummyUserProfile);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarColor, setSnackbarColor] = useState('');
+  const [logoutDialogVisible, setLogoutDialogVisible] = useState(false);
 
-  const handleSaveProfile = () => {
-    // Save the updated profile (e.g., make an API call)
-    console.log('Profile saved:', profile);
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await fetchUserProfile();
+        setUser(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setSnackbarMessage('Logged out successfully!');
+      setSnackbarColor('green');
+      setSnackbarVisible(true);
+      setTimeout(() => {
+        navigation.replace('LoginScreen');
+      }, 1500); // Delay to show the success message before navigating
+    } catch (err) {
+      setSnackbarMessage('Failed to logout. Please try again.');
+      setSnackbarColor('red');
+      setSnackbarVisible(true);
+    } finally {
+      setLogoutDialogVisible(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={[styles.title, { color: theme.colors.primary }]}>User Profile</Text>
-
-        <TextInput
-          label="Name"
-          value={profile.name}
-          onChangeText={(text) => setProfile({ ...profile, name: text })}
-          style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-          mode="outlined"
-          theme={{ roundness: 10 }}
-        />
-        <TextInput
-          label="Employee ID"
-          value={profile.employeeId}
-          onChangeText={(text) => setProfile({ ...profile, employeeId: text })}
-          style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-          mode="outlined"
-          theme={{ roundness: 10 }}
-        />
-        <TextInput
-          label="Email"
-          value={profile.email}
-          onChangeText={(text) => setProfile({ ...profile, email: text })}
-          style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-          mode="outlined"
-          theme={{ roundness: 10 }}
-          keyboardType="email-address"
-        />
-        <TextInput
-          label="Phone"
-          value={profile.phone}
-          onChangeText={(text) => setProfile({ ...profile, phone: text })}
-          style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-          mode="outlined"
-          theme={{ roundness: 10 }}
-          keyboardType="phone-pad"
-        />
-
-        <Button mode="contained" onPress={handleSaveProfile} style={styles.button}>
-          Save Profile
+        <Text style={styles.title}>Profile</Text>
+        <View style={styles.detailContainer}>
+          <Text style={styles.label}>Name:</Text>
+          <Text style={styles.value}>{user?.name}</Text>
+        </View>
+        <View style={styles.detailContainer}>
+          <Text style={styles.label}>Email:</Text>
+          <Text style={styles.value}>{user?.email}</Text>
+        </View>
+        <View style={styles.detailContainer}>
+          <Text style={styles.label}>Employee ID:</Text>
+          <Text style={styles.value}>{user?.employeeId}</Text>
+        </View>
+        <Button
+          mode="contained"
+          onPress={() => setLogoutDialogVisible(true)}
+          style={[styles.button, { backgroundColor: theme.colors.primary }]}
+        >
+          Logout
         </Button>
       </ScrollView>
+      <Portal>
+        <Dialog
+          visible={logoutDialogVisible}
+          onDismiss={() => setLogoutDialogVisible(false)}
+        >
+          <Dialog.Title>Confirm Logout</Dialog.Title>
+          <Dialog.Content>
+            <Paragraph>Are you sure you want to logout?</Paragraph>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setLogoutDialogVisible(false)}>Cancel</Button>
+            <Button onPress={handleLogout}>Logout</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        style={{ backgroundColor: snackbarColor }}
+      >
+        {snackbarMessage}
+      </Snackbar>
     </SafeAreaView>
   );
 };
@@ -73,7 +120,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   container: {
-    flexGrow: 1,
     padding: 16,
   },
   title: {
@@ -82,12 +128,37 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
   },
-  input: {
+  detailContainer: {
     marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  label: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  value: {
+    fontSize: 18,
   },
   button: {
-    marginTop: 16,
-    borderRadius: 10,
+    marginTop: 32,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    color: '#000',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: 'red',
   },
 });
 

@@ -15,7 +15,7 @@ import SendItemsScreen from "./src/screens/SendItemsScreen";
 import ReceiveItemsScreen from "./src/screens/ReceiveItemsScreen";
 import TransactionHistoryScreen from "./src/screens/TransactionHistoryScreen";
 import ProductDetailsScreen from "./src/screens/ProductDetailsScreen";
-import AnalyticsDashboardScreen from "./src/screens/AnalyticsDashboardScreen";
+import DashboardScreen from "./src/screens/DashboardScreen";
 import UserProfileScreen from "./src/screens/UserProfileScreen";
 
 const queryClient = new QueryClient();
@@ -33,7 +33,7 @@ function HomeTabs() {
 
           if (route.name === "Home") {
             iconName = "home";
-          } else if (route.name === "Analytics") {
+          } else if (route.name === "Dashboard") {
             iconName = "chart-bar";
           } else if (route.name === "Profile") {
             iconName = "account";
@@ -53,8 +53,8 @@ function HomeTabs() {
         options={{ headerShown: false }}
       />
       <Tab.Screen
-        name="Analytics"
-        component={AnalyticsDashboardScreen}
+        name="Dashboard"
+        component={DashboardScreen}
         options={{ headerShown: false }}
       />
       <Tab.Screen

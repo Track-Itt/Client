@@ -1,61 +1,74 @@
-import * as React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView, Modal, TouchableOpacity } from 'react-native';
-import { TextInput, Button, Text, useTheme, Snackbar } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, SafeAreaView, ScrollView, Text, ActivityIndicator, Modal, TouchableOpacity } from 'react-native';
+import { TextInput, Button, useTheme, Snackbar } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
+import { fetchAllWarehouses, fetchAllInventories, fetchAllProducts, sendItems } from '../services/api';
 
-// Dummy data as per the backend model structure
-const dummyData = {
-  warehouses: [
-    { label: 'Warehouse A', value: 'warehouseA' },
-    { label: 'Warehouse B', value: 'warehouseB' },
-  ],
-  inventories: [
-    { label: 'Inventory 1', value: 'inventory1' },
-    { label: 'Inventory 2', value: 'inventory2' },
-  ],
-  products: [
-    { label: 'Product A', value: 'productA' },
-    { label: 'Product B', value: 'productB' },
-  ],
-  deliveryPartners: [
-    { label: 'Partner 1', value: 'partner1' },
-    { label: 'Partner 2', value: 'partner2' },
-  ],
-};
-
-const SendItemsScreen = ({ navigation }) => {
-  const [fromWarehouse, setFromWarehouse] = React.useState('');
-  const [toInventory, setToInventory] = React.useState('');
-  const [selectedProducts, setSelectedProducts] = React.useState([]);
-  const [deliveredByEmployeeId, setDeliveredByEmployeeId] = React.useState('');
-  const [receivedByEmployeeId, setReceivedByEmployeeId] = React.useState('');
-  const [vehicleNumber, setVehicleNumber] = React.useState('');
-  const [snackbarVisible, setSnackbarVisible] = React.useState(false);
-  const [snackbarMessage, setSnackbarMessage] = React.useState('');
-  const [snackbarColor, setSnackbarColor] = React.useState('');
-
-  // Modal state
-  const [modalVisible, setModalVisible] = React.useState(false);
-  const [modalType, setModalType] = React.useState(''); // 'warehouse', 'inventory', 'products'
-
+const SendItemsScreen = () => {
   const theme = useTheme();
+  const [fromWarehouse, setFromWarehouse] = useState('');
+  const [toInventory, setToInventory] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(''); // Store only one selected product
+  const [deliveredByEmployeeId, setDeliveredByEmployeeId] = useState('');
+  const [receivedByEmployeeId, setReceivedByEmployeeId] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
+  const [warehouses, setWarehouses] = useState([]);
+  const [inventories, setInventories] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarColor, setSnackbarColor] = useState('');
 
-  const handleSendItems = () => {
-    if (fromWarehouse && toInventory && selectedProducts.length && deliveredByEmployeeId && receivedByEmployeeId && vehicleNumber) {
-      setSnackbarMessage('Items sent successfully!');
-      setSnackbarColor('green');
-      setSnackbarVisible(true);
-      setTimeout(() => {
-        setSnackbarVisible(false);
-        navigation.goBack();
-      }, 3000);
-    } else {
+  // Modal state for pickers
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState(''); // 'fromWarehouse', 'toInventory', or 'selectedProduct'
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [warehouseData, inventoryData, productData] = await Promise.all([
+          fetchAllWarehouses(),
+          fetchAllInventories(),
+          fetchAllProducts(1, 100, '', '', ''),
+        ]);
+        setWarehouses(warehouseData);
+        setInventories(inventoryData);
+        if(productData && productData.products)
+          setProducts(productData.products);
+      } catch (error) {
+        setSnackbarMessage(error.message);
+        setSnackbarColor('red');
+        setSnackbarVisible(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleSendItems = async () => {
+    if (!fromWarehouse || !toInventory || !selectedProduct || !deliveredByEmployeeId || !receivedByEmployeeId || !vehicleNumber) {
       setSnackbarMessage('Please fill out all fields.');
       setSnackbarColor('red');
       setSnackbarVisible(true);
-      setTimeout(() => {
-        setSnackbarVisible(false);
-      }, 3000);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await sendItems(fromWarehouse, toInventory, [selectedProduct], deliveredByEmployeeId, receivedByEmployeeId, vehicleNumber);
+      setSnackbarMessage('Items sent successfully!');
+      setSnackbarColor('green');
+      setSnackbarVisible(true);
+    } catch (error) {
+      console.error(error);
+      setSnackbarMessage('Failed to send items.');
+      setSnackbarColor('red');
+      setSnackbarVisible(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -65,68 +78,82 @@ const SendItemsScreen = ({ navigation }) => {
   };
 
   const handleSelectValue = (value) => {
-    if (modalType === 'warehouse') {
+    if (modalType === 'fromWarehouse') {
       setFromWarehouse(value);
-    } else if (modalType === 'inventory') {
+    } else if (modalType === 'toInventory') {
       setToInventory(value);
-    } else if (modalType === 'products') {
-      setSelectedProducts(value);
+    } else if (modalType === 'selectedProduct') {
+      setSelectedProduct(value);
     }
     setModalVisible(false);
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={[styles.title, { color: theme.colors.primary }]}>Send Items</Text>
         <TouchableOpacity
           style={[styles.ButtonInput, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-          onPress={() => handleOpenModal('warehouse')}
+          onPress={() => handleOpenModal('fromWarehouse')}
         >
           <Text style={styles.pickerText}>
-            {fromWarehouse ? dummyData.warehouses.find(w => w.value === fromWarehouse)?.label : 'Select From Warehouse'}
+            {fromWarehouse ? warehouses.find(w => w._id === fromWarehouse)?.location : 'Select From Warehouse'}
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.ButtonInput, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-          onPress={() => handleOpenModal('inventory')}
+          onPress={() => handleOpenModal('toInventory')}
         >
           <Text style={styles.pickerText}>
-            {toInventory ? dummyData.inventories.find(i => i.value === toInventory)?.label : 'Select To Inventory'}
+            {toInventory ? inventories.find(i => i._id === toInventory)?.location : 'Select To Inventory'}
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.ButtonInput, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-          onPress={() => handleOpenModal('products')}
+          onPress={() => handleOpenModal('selectedProduct')}
         >
           <Text style={styles.pickerText}>
-            {selectedProducts.length ? `${selectedProducts.length} Product(s) Selected` : 'Select Products'}
+            {selectedProduct ? products.find(p => p._id === selectedProduct)?.name : 'Select Product to Transfer'}
           </Text>
         </TouchableOpacity>
+
         <TextInput
           label="Delivered By Employee ID"
           value={deliveredByEmployeeId}
-          onChangeText={text => setDeliveredByEmployeeId(text)}
+          onChangeText={setDeliveredByEmployeeId}
           style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
           mode="outlined"
           theme={{ roundness: 10 }}
         />
+
         <TextInput
           label="Received By Employee ID"
           value={receivedByEmployeeId}
-          onChangeText={text => setReceivedByEmployeeId(text)}
+          onChangeText={setReceivedByEmployeeId}
           style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
           mode="outlined"
           theme={{ roundness: 10 }}
         />
+
         <TextInput
           label="Vehicle Number"
           value={vehicleNumber}
-          onChangeText={text => setVehicleNumber(text)}
+          onChangeText={setVehicleNumber}
           style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
           mode="outlined"
           theme={{ roundness: 10 }}
         />
+
         <Button
           mode="contained"
           onPress={handleSendItems}
@@ -135,6 +162,7 @@ const SendItemsScreen = ({ navigation }) => {
         >
           Send Items
         </Button>
+
         <Snackbar
           visible={snackbarVisible}
           onDismiss={() => setSnackbarVisible(false)}
@@ -155,22 +183,24 @@ const SendItemsScreen = ({ navigation }) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Picker
-              selectedValue={modalType === 'warehouse' ? fromWarehouse : modalType === 'inventory' ? toInventory : selectedProducts}
+              selectedValue={
+                modalType === 'fromWarehouse' ? fromWarehouse
+                : modalType === 'toInventory' ? toInventory
+                : modalType === 'selectedProduct' ? selectedProduct
+                : undefined
+              }
               onValueChange={(value) => handleSelectValue(value)}
             >
-              <Picker.Item label={`Select ${modalType === 'warehouse' ? 'Warehouse' : modalType === 'inventory' ? 'Inventory' : 'Products'}`} value="" />
-              {modalType === 'warehouse' &&
-                dummyData.warehouses.map((item) => (
-                  <Picker.Item key={item.value} label={item.label} value={item.value} />
-                ))}
-              {modalType === 'inventory' &&
-                dummyData.inventories.map((item) => (
-                  <Picker.Item key={item.value} label={item.label} value={item.value} />
-                ))}
-              {modalType === 'products' &&
-                dummyData.products.map((item) => (
-                  <Picker.Item key={item.value} label={item.label} value={item.value} />
-                ))}
+              <Picker.Item label={`Select ${modalType === 'fromWarehouse' ? 'Warehouse' : modalType === 'toInventory' ? 'Inventory' : 'Product'}`} value="" />
+              {modalType === 'fromWarehouse' && warehouses.map((item) => (
+                <Picker.Item key={item._id} label={item.location} value={item._id} />
+              ))}
+              {modalType === 'toInventory' && inventories.map((item) => (
+                <Picker.Item key={item._id} label={item.location} value={item._id} />
+              ))}
+              {modalType === 'selectedProduct' && products.map((item) => (
+                <Picker.Item key={item._id} label={item.name} value={item._id} />
+              ))}
             </Picker>
             <Button onPress={() => setModalVisible(false)}>Close</Button>
           </View>
@@ -186,15 +216,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   container: {
-    flexGrow: 1,
     padding: 16,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    textAlign: 'center',
   },
   input: {
     marginBottom: 16,
@@ -213,6 +235,15 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    color: '#000',
   },
   modalContainer: {
     flex: 1,
