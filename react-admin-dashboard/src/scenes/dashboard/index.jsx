@@ -12,16 +12,34 @@ import GeographyChart from "../../components/GeographyChart";
 import BarChart from "../../components/BarChart";
 import StatBox from "../../components/StatBox";
 import ProgressCircle from "../../components/ProgressCircle";
-
+import axios from "axios";
+import { useState, useEffect } from "react";
+import PieChart from "../../components/PieChart";
 const Dashboard = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/chart/invoicesTable");
+        setData(response.data);
+      } catch (err) {
+        setError("Failed to fetch data");
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchData();
+  }, []);
   return (
     <Box m="20px">
       {/* HEADER */}
       <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Header title="DASHBOARD" subtitle="Welcome to your dashboard" />
+        <Header title="TrackItt" subtitle="Welcome to your dashboard" />
 
         <Box>
           <Button
@@ -94,7 +112,7 @@ const Dashboard = () => {
         >
           <StatBox
             title="32,441"
-            subtitle="New Clients"
+            subtitle="New Customers"
             progress="0.30"
             increase="+5%"
             icon={
@@ -183,7 +201,7 @@ const Dashboard = () => {
               Recent Transactions
             </Typography>
           </Box>
-          {mockTransactions.map((transaction, i) => (
+          {data.map((transaction, i) => (
             <Box
               key={`${transaction.txId}-${i}`}
               display="flex"
@@ -192,23 +210,28 @@ const Dashboard = () => {
               borderBottom={`4px solid ${colors.primary[500]}`}
               p="15px"
             >
-              <Box>
+              <Box
+              flex='1'
+              >
                 <Typography
                   color={colors.greenAccent[500]}
                   variant="h5"
                   fontWeight="600"
                 >
-                  {transaction.txId}
+                  {transaction.id}
                 </Typography>
                 <Typography color={colors.grey[100]}>
-                  {transaction.user}
+                  {transaction.name}
                 </Typography>
               </Box>
-              <Box color={colors.grey[100]}>{transaction.date}</Box>
+              <Box color={colors.grey[100]}
+                  flex='1'
+              >{transaction.date}</Box>
               <Box
                 backgroundColor={colors.greenAccent[500]}
                 p="5px 10px"
                 borderRadius="4px"
+     
               >
                 ₹{transaction.cost}
               </Box>
@@ -224,24 +247,10 @@ const Dashboard = () => {
           p="30px"
         >
           <Typography variant="h5" fontWeight="600">
-            Campaign
+            Category sales distribution
           </Typography>
-          <Box
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            mt="25px"
-          >
-            <ProgressCircle size="125" />
-            <Typography
-              variant="h5"
-              color={colors.greenAccent[500]}
-              sx={{ mt: "15px" }}
-            >
-              ₹49,82,289.21 revenue generated
-            </Typography>
-            <Typography>Includes extra misc expenditures and costs</Typography>
-          </Box>
+
+          <PieChart isDashboard={true}/>
         </Box>
         <Box
           gridColumn="span 4"
