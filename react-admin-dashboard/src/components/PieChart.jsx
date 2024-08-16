@@ -1,11 +1,38 @@
+import { useState, useEffect } from "react";
 import { ResponsivePie } from "@nivo/pie";
 import { tokens } from "../theme";
 import { useTheme } from "@mui/material";
-import { mockPieData as data } from "../data/mockData";
 
 const PieChart = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
+
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    // Fetch data from API
+    const fetchData = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/chart/pieChart");
+        const result = await response.json();
+
+        // Transform the data to fit the format expected by the pie chart
+        const transformedData = result.map((item, index) => ({
+          id: item.name,
+          label: item.name,
+          value: item.total,
+          color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`,
+        }));
+
+        setData(transformedData);
+      } catch (error) {
+        console.error("Error fetching the data: ", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   return (
     <ResponsivePie
       data={data}
