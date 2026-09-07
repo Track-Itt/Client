@@ -9,6 +9,6 @@ projectIdentifier: SSEM
 spec:
   lifecycle: prod
 metadata:
-  description: TestAccResourceRemoteCatalogEntity
+  description: TestAccResourceRemoteCatalogEntity_updated
   tags:
   - test
