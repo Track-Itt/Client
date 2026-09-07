@@ -1,0 +1,12 @@
+apiVersion: harness.io/v1
+kind: Component
+type: service
+identifier: TestAccResourceRemoteCatalogEntity_KY9an_base
+name: Base Branch Catalog Entity
+owner: user:account/admin@harness.io
+orgIdentifier: default
+projectIdentifier: SSEM
+spec:
+  lifecycle: prod
+metadata:
+  description: Base branch fixture for TestAccResourceRemoteCatalogEntity_KY9an
