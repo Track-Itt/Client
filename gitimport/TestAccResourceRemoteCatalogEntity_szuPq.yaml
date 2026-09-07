@@ -1,0 +1,14 @@
+apiVersion: harness.io/v1
+kind: Component
+type: service
+identifier: TestAccResourceRemoteCatalogEntity_szuPq
+name: Example Catalog
+owner: user:account/admin@harness.io
+orgIdentifier: default
+projectIdentifier: SSEM
+spec:
+  lifecycle: prod
+metadata:
+  description: TestAccResourceRemoteCatalogEntity
+  tags:
+  - test
